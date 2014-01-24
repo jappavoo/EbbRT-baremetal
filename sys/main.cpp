@@ -30,6 +30,8 @@
 #include <sys/vmem.hpp>
 #include <sys/vmem_allocator.hpp>
 
+extern void appmain() __attribute__((weak));
+
 using namespace ebbrt;
 
 namespace { bool started_once = false; }
@@ -105,6 +107,7 @@ extern "C"
     apic_init();
     ApicTimer::Init();
     smp_init();
+#ifdef NETWORKING
     NetworkManager::Init();
     pci_init();
     pci_register_probe(virtio_net_driver::probe);
@@ -117,8 +120,15 @@ extern "C"
                  []() {
       kprintf("connected\n");
     });
+#endif
     kprintf("System initialization complete\n");
-  });
 
+    if (appmain) {
+      event_manager->SpawnLocal(appmain);
+    } else {
+      kprintf("No appmain found...\n");
+    }
+
+  });
   event_manager->StartProcessingEvents();
 }

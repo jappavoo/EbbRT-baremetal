@@ -91,29 +91,32 @@ $(lwip_objects): CFLAGS += -Wno-address
 
 runtime_objects = sys/newlib.o sys/gthread.o sys/runtime.o
 
-all: ebbrt.iso
-.PHONY: all clean
-
 strip = strip -s $< -o $@
 mkrescue = grub-mkrescue -o $@ -graft-points boot/ebbrt=$< \
 	boot/grub/grub.cfg=$(src)/misc/grub.cfg
 
 
-ebbrt.iso: ebbrt.elf.stripped
-	$(call quiet, $(mkrescue), MKRESCUE $@)
+%.iso: %.elf.stripped
+	$(call quiet, $(mkrescue), MKRESUCE $@)
 
-ebbrt.elf.stripped: ebbrt.elf
+%.elf.stripped: %.elf
 	$(call quiet, $(strip), STRIP $@)
 
-# ebbrt.elf32: ebbrt.elf
-# 	$(call quiet,objcopy -O elf32-i386 $< $@, OBJCOPY $@)
 
 LDFLAGS := -Wl,-n,-z,max-page-size=0x1000 $(optflags)
-ebbrt.elf: $(objects) sys/ebbrt.ld $(runtime_objects)
-	$(call quiet, $(CXX) $(LDFLAGS) -o $@ $(objects) \
+
+%.elf: $(app_objects) $(objects) sys/ebbrt.ld $(runtime_objects)
+	$(call quiet, $(CXX) $(LDFLAGS) -o $@ $(app_objects) $(objects) \
 		-T $(src)/sys/ebbrt.ld $(runtime_objects), LD $@)
 
+.PRECIOUS: %.o %.elf %.elf.stripped
+
+.PHONY: clean
 clean:
-	-$(RM) $(wildcard $(objects) ebbrt.elf)
+	-$(RM) $(wildcard $(objects) $(app_objects) *.elf)
+
 
 -include $(shell find -name '*.d')
+
+# avoid clean or any of the dependency targets from becoming default target
+.DEFAULT_GOAL :=
